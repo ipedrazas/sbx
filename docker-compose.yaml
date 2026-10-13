@@ -1,0 +1,19 @@
+services:
+  dstudio:
+    build: .
+    image: sbx:latest
+    ports:
+      - "9820:9820"
+    volumes:
+      - dstudio-data:/root/.dstudio
+    environment:
+      - DSTUDIO_LOG=info
+      # Set a known manage_token so the desktop app can authenticate.
+      - DSTUDIO_MANAGE_TOKEN=${DSTUDIO_MANAGE_TOKEN:-}
+      - DSTUDIO_OAUTH_REDIRECT_URL=${DSTUDIO_OAUTH_REDIRECT_URL:-}
+      - VAULT_ADDR=${VAULT_ADDR:-}
+      - VAULT_TOKEN=${VAULT_TOKEN:-}
+    restart: unless-stopped
+
+volumes:
+  dstudio-data:

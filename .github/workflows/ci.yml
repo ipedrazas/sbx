@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Lint & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then echo "$unformatted"; exit 1; fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Test with race detector and coverage
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Enforce coverage >= 45%
+        run: |
+          go tool cover -func=coverage.out | tail -1
+          total=$(go tool cover -func=coverage.out | awk '/^total:/ {sub("%","",$3); print $3}')
+          awk -v t="$total" 'BEGIN { if (t+0 < 45) { printf "::error::coverage %.1f%% is below 45%%\n", t; exit 1 } }'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
+  build:
+    name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: darwin, goarch: arm64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          PKG=github.com/ipedrazas/sbx/internal/version
+          VERSION=${GITHUB_REF_NAME#v}
+          [[ "$GITHUB_REF" == refs/tags/v* ]] || VERSION=0.0.0-dev
+          go build -trimpath -ldflags "-s -w -X $PKG.Version=$VERSION -X $PKG.GitSHA=${GITHUB_SHA::12} -X $PKG.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -o dist/sbx ./cmd/sbx
+          tar -czf sbx-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz -C dist sbx
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbx-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: sbx-*.tar.gz
+
+  docker:
+    name: Docker image
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=sha,format=short
+      - name: Build provenance
+        id: prov
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          [[ "$GITHUB_REF" == refs/tags/v* ]] || v=0.0.0-dev
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.prov.outputs.version }}
+            GIT_SHA=${{ github.sha }}
+            BUILD_TIME=${{ steps.prov.outputs.build_time }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

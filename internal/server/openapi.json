@@ -1,0 +1,5704 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "DStudio Daemon API",
+    "description": "Data gateway for AI agents. Humans configure datasources and datasets through a GUI; agents consume them via a uniform HTTP API.\n\n## Authentication\n\n**Management API** (`/manage/*`): Bearer token from `~/.dstudio/config.toml`.\n\n**Live API** (`/a/*`) and **Actions API** (`/act/*`): Per-agent bearer tokens created via the management API.\n\nThe health endpoint (`GET /manage/health`) is unauthenticated.",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.8"
+  },
+  "paths": {
+    "/a/{agent_id}/datasets": {
+      "get": {
+        "tags": [
+          "Live API"
+        ],
+        "summary": "List datasets available to this agent",
+        "operationId": "live_list_datasets",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Datasets with schema"
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "agent_token": []
+          }
+        ]
+      }
+    },
+    "/a/{agent_id}/{alias}/get/{item_id}": {
+      "get": {
+        "tags": [
+          "Live API"
+        ],
+        "summary": "Get a single item by ID",
+        "operationId": "live_get_item",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Single item"
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "agent_token": []
+          }
+        ]
+      }
+    },
+    "/a/{agent_id}/{alias}/list": {
+      "get": {
+        "tags": [
+          "Live API"
+        ],
+        "summary": "List items from a dataset",
+        "operationId": "live_list",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [
+          {
+            "agent_token": []
+          }
+        ]
+      }
+    },
+    "/a/{agent_id}/{alias}/schema": {
+      "get": {
+        "tags": [
+          "Live API"
+        ],
+        "summary": "Get the schema of a dataset",
+        "operationId": "live_schema",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "agent_token": []
+          }
+        ]
+      }
+    },
+    "/a/{agent_id}/{alias}/search": {
+      "get": {
+        "tags": [
+          "Live API"
+        ],
+        "summary": "Full-text search across searchable fields",
+        "operationId": "live_search",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "agent_token": []
+          }
+        ]
+      }
+    },
+    "/act/{agent_id}/approvals/{approval_id}": {
+      "get": {
+        "tags": [
+          "Actions API"
+        ],
+        "summary": "Poll the state of a queued approval",
+        "operationId": "get_action_approval",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "agent_token": []
+          }
+        ]
+      }
+    },
+    "/act/{agent_id}/{alias}": {
+      "post": {
+        "tags": [
+          "Actions API"
+        ],
+        "summary": "Invoke an action. Requires Idempotency-Key header. Returns 200 (executed), 202 (pending approval), 409 (idempotency conflict), or 429 (rate limited).",
+        "operationId": "invoke_action",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "simulated",
+            "in": "query",
+            "description": "Force simulation mode",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Action executed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvokeResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Pending approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingApprovalResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "agent_token": []
+          }
+        ]
+      }
+    },
+    "/manage/actions": {
+      "get": {
+        "tags": [
+          "Actions"
+        ],
+        "summary": "List actions (optionally filter by datasource)",
+        "operationId": "list_actions",
+        "parameters": [
+          {
+            "name": "datasource_id",
+            "in": "query",
+            "description": "Filter by datasource",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Action list (enriched with scope info)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Actions"
+        ],
+        "summary": "Create an action",
+        "operationId": "create_action",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/actions/{id}": {
+      "get": {
+        "tags": [
+          "Actions"
+        ],
+        "summary": "Get a single action",
+        "operationId": "get_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Action"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Actions"
+        ],
+        "summary": "Update an action",
+        "operationId": "update_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Actions"
+        ],
+        "summary": "Delete an action",
+        "operationId": "delete_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Predefined action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/actions/{id}/state": {
+      "post": {
+        "tags": [
+          "Actions"
+        ],
+        "summary": "Set action state (enabled/disabled/paused)",
+        "operationId": "set_action_state",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetActionStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "State updated"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/actions/{id}/test": {
+      "post": {
+        "tags": [
+          "Actions"
+        ],
+        "summary": "Test an action (simulated execution)",
+        "operationId": "test_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Simulated result"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents": {
+      "get": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "List all agents",
+        "operationId": "list_agents",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Create an agent",
+        "operationId": "create_agent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}": {
+      "get": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Get agent with dataset bindings",
+        "operationId": "get_agent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Agent ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Update an agent",
+        "operationId": "update_agent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Delete an agent",
+        "operationId": "delete_agent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/actions": {
+      "get": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "List action bindings for an agent",
+        "operationId": "list_agent_actions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionBindingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Bind an action to an agent",
+        "operationId": "bind_agent_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/actions/{action_id}": {
+      "put": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Update an action binding",
+        "operationId": "update_agent_action_binding",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Remove an action binding",
+        "operationId": "unbind_agent_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/datasets": {
+      "get": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "List dataset bindings for an agent",
+        "operationId": "list_agent_datasets",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDatasetsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Bind a dataset to an agent",
+        "operationId": "bind_agent_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindDatasetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/datasets/{dataset_id}": {
+      "put": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Update a dataset binding",
+        "operationId": "update_agent_dataset_binding",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBindingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Remove a dataset binding",
+        "operationId": "unbind_agent_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/export": {
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Export a portable skill package",
+        "operationId": "export_skill_package",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Package exported"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/generate-cli-config": {
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Generate CLI config for an agent",
+        "operationId": "generate_cli_config",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CLI configuration JSON"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/generate-mcp-config": {
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Generate MCP config for an agent",
+        "operationId": "generate_mcp_config",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MCP configuration JSON"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/generate-skill": {
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Generate SKILL.md for an agent",
+        "operationId": "generate_skill",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/installations": {
+      "get": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "List skill installations for an agent",
+        "operationId": "list_installations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallationsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Install a skill to a folder",
+        "operationId": "create_installation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstallationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Installation created"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/installations/{inst_id}": {
+      "delete": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Remove a skill installation",
+        "operationId": "delete_installation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "inst_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Installation removed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/metrics": {
+      "get": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Get per-dataset metrics for an agent",
+        "operationId": "get_agent_metrics",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-dataset metrics"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/tokens": {
+      "get": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "List agent tokens",
+        "operationId": "list_agent_tokens",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Create an agent token (the raw token is returned only once)",
+        "operationId": "create_agent_token",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenCreatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/tokens/{token_id}": {
+      "delete": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Revoke an agent token",
+        "operationId": "delete_agent_token",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/agents/{id}/tokens/{token_id}/force-simulate": {
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "Set force-simulate flag on a token",
+        "operationId": "set_token_force_simulate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForceSimulateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Flag updated"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/approvals": {
+      "get": {
+        "tags": [
+          "Approvals"
+        ],
+        "summary": "List pending approvals",
+        "operationId": "list_approvals",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "description": "Filter: pending (default) or all",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "description": "Filter by agent",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/approvals/{id}": {
+      "get": {
+        "tags": [
+          "Approvals"
+        ],
+        "summary": "Get approval details",
+        "operationId": "get_approval",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApproval"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/approvals/{id}/approve": {
+      "post": {
+        "tags": [
+          "Approvals"
+        ],
+        "summary": "Approve a pending request (executes the action inline)",
+        "operationId": "approve",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Action executed"
+          },
+          "409": {
+            "description": "No longer pending"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/approvals/{id}/deny": {
+      "post": {
+        "tags": [
+          "Approvals"
+        ],
+        "summary": "Deny a pending request",
+        "operationId": "deny",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Denied"
+          },
+          "409": {
+            "description": "No longer pending"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/audit": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "summary": "Query audit log",
+        "operationId": "list_audit",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "dataset_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Max 500",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit events with pagination meta"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "List all datasets",
+        "operationId": "list_datasets",
+        "responses": {
+          "200": {
+            "description": "Dataset list (enriched with datasource_name)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Create a dataset",
+        "operationId": "create_dataset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDatasetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/draft-description": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "AI-assisted dataset description draft",
+        "operationId": "draft_description",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftDescriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "AI-drafted description and data_kind"
+          },
+          "412": {
+            "description": "AI assist disabled"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Get dataset with fields and filters",
+        "operationId": "get_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Dataset ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Update a dataset",
+        "operationId": "update_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDatasetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Delete a dataset",
+        "operationId": "delete_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/duplicate": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Duplicate a dataset",
+        "operationId": "duplicate_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuplicateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/fields": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Get dataset fields",
+        "operationId": "get_dataset_fields",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Update dataset fields",
+        "operationId": "update_dataset_fields",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DatasetField"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/filters": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Get dataset filters",
+        "operationId": "get_dataset_filters",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FiltersResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Update dataset filters",
+        "operationId": "update_dataset_filters",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DatasetFilter"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/generate": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Generate synthetic data",
+        "operationId": "generate_synthetic",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Rows generated"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/introspect": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Introspect dataset fields from the source",
+        "operationId": "introspect_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldsResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/metrics": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Get dataset metrics",
+        "operationId": "get_dataset_metrics",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset usage metrics"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/pause": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Pause a dataset",
+        "operationId": "pause_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/pii-scan": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Run PII scan",
+        "operationId": "pii_scan",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scan results per field"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/preview": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Preview dataset rows",
+        "operationId": "preview_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/require-pii-review": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Set require-PII-review flag",
+        "operationId": "set_require_pii_review",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequireReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Flag updated"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/resume": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Resume a dataset",
+        "operationId": "resume_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasets/{id}/snapshot": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Take a mirror snapshot",
+        "operationId": "snapshot_dataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot captured"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasources": {
+      "get": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "List all datasources",
+        "operationId": "list_datasources",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasourceListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "Create a datasource",
+        "operationId": "create_datasource",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDatasourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasources/{id}": {
+      "get": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "Get a single datasource",
+        "operationId": "get_datasource",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Datasource ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Datasource"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "Update a datasource",
+        "operationId": "update_datasource",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Datasource ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDatasourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "Delete a datasource",
+        "operationId": "delete_datasource",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Datasource ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Has dependent datasets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasources/{id}/rest/sample": {
+      "post": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "Sample a REST endpoint",
+        "operationId": "rest_sample",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestSampleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Sample data with inferred schema"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasources/{id}/rest/spec/endpoints": {
+      "get": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "List REST spec endpoints (from OpenAPI spec)",
+        "operationId": "rest_spec_endpoints",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Available REST operations"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasources/{id}/tables": {
+      "get": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "List tables (Postgres only)",
+        "operationId": "list_tables",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Table list"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasources/{id}/tables/{table}/columns": {
+      "get": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "List table columns (Postgres only)",
+        "operationId": "list_table_columns",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Column list"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/datasources/{id}/test": {
+      "post": {
+        "tags": [
+          "Datasources"
+        ],
+        "summary": "Test datasource connection",
+        "operationId": "test_datasource_connection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Datasource ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connection OK"
+          },
+          "502": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health check (unauthenticated)",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Daemon is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Degraded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/manage/oauth/connections": {
+      "get": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "List OAuth connections",
+        "operationId": "list_connections",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Create an OAuth connection",
+        "operationId": "create_connection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/oauth/connections/{id}": {
+      "get": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Get an OAuth connection",
+        "operationId": "get_connection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthConnection"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Update an OAuth connection",
+        "operationId": "update_connection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Delete an OAuth connection",
+        "operationId": "delete_connection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "In use by datasources"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/oauth/connections/{id}/scopes": {
+      "post": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Update scopes on an OAuth connection",
+        "operationId": "update_connection_scopes",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScopesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/oauth/start": {
+      "post": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Start an OAuth flow (returns auth_url to open in browser)",
+        "operationId": "start_oauth",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthStartResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/settings/ai": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Get AI assist settings",
+        "operationId": "get_ai_settings",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Update AI assist settings",
+        "operationId": "update_ai_settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/settings/ai/api-key": {
+      "delete": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Delete AI API key from secret store",
+        "operationId": "delete_ai_api_key",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/manage/stats": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Daemon stats",
+        "operationId": "stats",
+        "responses": {
+          "200": {
+            "description": "Daemon statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Action": {
+        "type": "object",
+        "required": [
+          "id",
+          "datasource_id",
+          "name",
+          "action_type",
+          "params_schema",
+          "result_schema",
+          "state",
+          "policy_kind",
+          "threshold_config",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "action_type": {
+            "type": "string",
+            "description": "Stable machine identifier (e.g. `create_draft`). Unique per datasource."
+          },
+          "approval_ttl_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "How long a queued approval lives before auto-deny. `None` means approvals never expire\nand must be explicitly resolved."
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "datasource_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "params_schema": {
+            "type": "object",
+            "description": "JSON Schema for request params. Used by the daemon for validation, by generators for\nSKILL/MCP/CLI contracts, and by the simulator to shape fake responses."
+          },
+          "policy_kind": {
+            "$ref": "#/components/schemas/PolicyKind"
+          },
+          "predefined": {
+            "type": "boolean"
+          },
+          "required_scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "result_schema": {
+            "type": "object",
+            "description": "JSON Schema for the response body."
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ActionState"
+          },
+          "threshold_config": {
+            "type": "object",
+            "description": "Action-specific threshold conditions; only consulted when `policy_kind = Threshold`."
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "ActionApproval": {
+        "type": "object",
+        "required": [
+          "id",
+          "agent_id",
+          "action_id",
+          "params",
+          "params_hash",
+          "simulated",
+          "state",
+          "created_at"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "agent_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Wall-clock time after which a still-pending row is swept to `Expired` by the daemon."
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "idempotency_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "params": {
+            "type": "object",
+            "description": "Canonical-JSON of the submitted params."
+          },
+          "params_hash": {
+            "type": "string",
+            "description": "SHA-256 hex of `params`. Lets an approver detect and reject tampering between queue\nand execute, and lets the idempotency layer 409 on same-key / different-body."
+          },
+          "resolved_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolved_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Free-text approver identifier from the UI session; no FK."
+          },
+          "result": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Connector response on successful execution, or a structured error envelope on failure.\n`None` while the approval is still pending."
+          },
+          "simulated": {
+            "type": "boolean"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ApprovalState"
+          },
+          "token_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Raw token id that issued the call. `None` if the token was rotated/deleted after the\nrow was written — history survives token deletion."
+          }
+        }
+      },
+      "ActionBindingsResponse": {
+        "type": "object",
+        "required": [
+          "bindings"
+        ],
+        "properties": {
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentAction"
+            }
+          }
+        }
+      },
+      "ActionState": {
+        "type": "string",
+        "enum": [
+          "enabled",
+          "disabled",
+          "paused"
+        ]
+      },
+      "Agent": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "agent_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Free-form tag identifying the consumer harness or product family (e.g.\n`openclaw`, `cowork`, `hermes`). Lets the UI group and filter agents\nwithout enforcing a fixed vocabulary."
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mission": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Longform description of what the agent is for — complements the short\n`description` field. Not propagated into SKILL.md automatically."
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Free-form owner identifier (name, team, email). Not an FK."
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Lifecycle status — typically `draft`, `active`, or `archived`, but kept\nas a free string so operators can invent their own values."
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentAction": {
+        "type": "object",
+        "required": [
+          "id",
+          "agent_id",
+          "action_id",
+          "alias"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "agent_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pinned_params": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Fixed parameter values merged into the agent's request at invocation\ntime. The agent cannot override these — they are forcefully applied\nafter the agent's payload is received. Used to lock parameters like\n`project_key` so an agent is constrained to a specific project."
+          },
+          "rate_limit_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Per-binding rate cap, expressed as `count` invocations per\n`rate_limit_period_seconds`. Both must be `Some` for the limit to apply."
+          },
+          "rate_limit_period_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Freeform template (e.g. a draft email skeleton) the agent should follow\nwhen crafting params for this action. Purely prompt guidance — the\ndaemon doesn't substitute or validate against it. Rendered into SKILL.md\nand config.json so connectors can surface it to the model."
+          }
+        }
+      },
+      "AgentDataset": {
+        "type": "object",
+        "required": [
+          "id",
+          "agent_id",
+          "dataset_id",
+          "alias"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rate_limit_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Per-binding rate cap, expressed as `count` requests per\n`rate_limit_period_seconds`. Both must be `Some` for the limit to apply;\neither missing means unlimited."
+          },
+          "rate_limit_period_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "AgentDatasetsResponse": {
+        "type": "object",
+        "required": [
+          "datasets"
+        ],
+        "properties": {
+          "datasets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentDataset"
+            }
+          }
+        }
+      },
+      "AgentDetailResponse": {
+        "type": "object",
+        "required": [
+          "agent",
+          "datasets"
+        ],
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/Agent"
+          },
+          "datasets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentDataset"
+            }
+          }
+        }
+      },
+      "AgentListResponse": {
+        "type": "object",
+        "required": [
+          "agents"
+        ],
+        "properties": {
+          "agents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Agent"
+            }
+          }
+        }
+      },
+      "AgentSkillInstallation": {
+        "type": "object",
+        "description": "A place on disk where an agent's `SKILL.md` has been installed outside its\nown `<data_dir>/agents/<name>/skills/dstudio/` home — e.g. `~/.hermes/skills`.\nThe daemon owns these files: every resync rewrites `<folder_path>/dstudio/SKILL.md`.",
+        "required": [
+          "id",
+          "agent_id",
+          "folder_path",
+          "installed_at",
+          "updated_at"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "folder_path": {
+            "type": "string",
+            "description": "Parent directory picked by the user (the `dstudio/` namespace dir lives below it)."
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "installed_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentToken": {
+        "type": "object",
+        "required": [
+          "id",
+          "agent_id",
+          "token_hash",
+          "label",
+          "created_at"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "force_simulate": {
+            "type": "boolean",
+            "description": "When true, every action invoked via this token is rerouted to the simulator regardless\nof the request-level `simulated` flag. Intended for staging tokens that must never hit\na real external system."
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "label": {
+            "type": "string"
+          },
+          "token_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "AiSettingsResponse": {
+        "type": "object",
+        "required": [
+          "enabled",
+          "model",
+          "api_key_configured"
+        ],
+        "properties": {
+          "api_key_configured": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "model": {
+            "type": "string"
+          }
+        }
+      },
+      "ApprovalListResponse": {
+        "type": "object",
+        "required": [
+          "approvals"
+        ],
+        "properties": {
+          "approvals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActionApproval"
+            }
+          }
+        }
+      },
+      "ApprovalState": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "denied",
+          "expired",
+          "executed",
+          "failed"
+        ]
+      },
+      "ApprovalStatusResponse": {
+        "type": "object",
+        "required": [
+          "approval_id",
+          "state",
+          "simulated",
+          "created_at"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolved_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolved_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "result": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "simulated": {
+            "type": "boolean"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ApprovalState"
+          }
+        }
+      },
+      "BindActionRequest": {
+        "type": "object",
+        "required": [
+          "action_id",
+          "alias"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "BindDatasetRequest": {
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "alias"
+        ],
+        "properties": {
+          "alias": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rate_limit_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "rate_limit_period_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "ConnectionListResponse": {
+        "type": "object",
+        "required": [
+          "connections"
+        ],
+        "properties": {
+          "connections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthConnection"
+            }
+          }
+        }
+      },
+      "CreateActionRequest": {
+        "type": "object",
+        "required": [
+          "datasource_id",
+          "name",
+          "action_type",
+          "params_schema",
+          "result_schema",
+          "threshold_config"
+        ],
+        "properties": {
+          "action_type": {
+            "type": "string"
+          },
+          "approval_ttl_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "datasource_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "params_schema": {
+            "type": "object"
+          },
+          "policy_kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PolicyKind"
+              }
+            ]
+          },
+          "predefined": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "required_scopes": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "result_schema": {
+            "type": "object"
+          },
+          "risk_level": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RiskLevel"
+              }
+            ]
+          },
+          "threshold_config": {
+            "type": "object"
+          }
+        }
+      },
+      "CreateAgentRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "agent_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mission": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CreateConnectionRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "provider",
+          "client_id"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateDatasetRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "datasource_id"
+        ],
+        "properties": {
+          "auto_introspect": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "cache_ttl_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "data_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "datasource_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_rows_per_query": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_config": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "synthetic_row_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "CreateDatasourceRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "ds_type",
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "type": "object"
+          },
+          "connection_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "ds_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateInstallationRequest": {
+        "type": "object",
+        "required": [
+          "folder_path"
+        ],
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateTokenRequest": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Dataset": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "datasource_id",
+          "mode",
+          "source_config",
+          "enabled",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "cache_ttl_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "data_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Coarse content tag (e.g. \"messages\", \"events\", \"records\"). Helps agents pick the\nright dataset when several are bound."
+          },
+          "datasource_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Human-authored description. Consumed by skill generation and exposed to agents so\nthey can tell similar datasets apart (\"customer records\" vs. \"prospect leads\")."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "When false, the dataset is paused: serving and sync are skipped but the config is kept."
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_page_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Hard cap on the serialized byte size of a single response page. When the\nitems payload exceeds this, the daemon returns 413 with guidance to use\n`?fields=` or a smaller `?limit=`. `None` means no cap."
+          },
+          "max_rows_per_query": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Per-dataset cap on rows returned by a single `list` or `search` call. `None` means\nfall back to the global 1000-row hard limit applied by the daemon."
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DatasetMode"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pii_scan_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Wall-clock time of the last PII scan, or `None` if never scanned."
+          },
+          "require_pii_review": {
+            "type": "boolean"
+          },
+          "snapshot_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_config": {
+            "type": "object",
+            "description": "Per-dataset connector config (e.g. `{\"table\": \"users\"}` for Postgres)"
+          },
+          "synthetic_row_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "DatasetDetailResponse": {
+        "type": "object",
+        "required": [
+          "dataset",
+          "fields",
+          "filters"
+        ],
+        "properties": {
+          "dataset": {
+            "$ref": "#/components/schemas/Dataset"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetField"
+            }
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetFilter"
+            }
+          }
+        }
+      },
+      "DatasetField": {
+        "type": "object",
+        "required": [
+          "id",
+          "dataset_id",
+          "source_name",
+          "display_name",
+          "field_type",
+          "visible"
+        ],
+        "properties": {
+          "credential_detected": {
+            "type": "boolean",
+            "description": "Set by the scanner when this field's sample values match a known\ncredential shape (API keys, JWTs, etc.). Informational — surfaced in\nthe UI as a red banner so operators notice credential leakage."
+          },
+          "dataset_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "field_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pii_class": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "PII classification from the last scan, or `None` if the field has\nnever been classified. Values: direct_identifier, quasi_identifier,\ncontact, health, financial, non_pii."
+          },
+          "pii_policy": {
+            "type": "string",
+            "description": "Redaction policy applied at serve time. One of `none`, `mask`, `drop`,\n`generalize`. Defaults to `none` — unclassified fields are served\nas-is."
+          },
+          "searchable": {
+            "type": "boolean",
+            "description": "When false, this field's values are excluded from `/a/.../search` matching — i.e. a\n`q` hit on this column does not return the row. Does not affect `/list` or pre-filters."
+          },
+          "sortable": {
+            "type": "boolean",
+            "description": "When false, agents cannot order results by this field — the `sort_by`\nparam treats it as unknown (silent no-op). Operator-facing override that\nonly *withdraws* sortability; effective sortability is additionally gated\nby the connector's capability and field visibility."
+          },
+          "source_name": {
+            "type": "string"
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DatasetFilter": {
+        "type": "object",
+        "required": [
+          "id",
+          "dataset_id",
+          "field_name",
+          "operator",
+          "value",
+          "logic",
+          "group_index"
+        ],
+        "properties": {
+          "dataset_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "field_name": {
+            "type": "string"
+          },
+          "group_index": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "logic": {
+            "$ref": "#/components/schemas/FilterLogic"
+          },
+          "operator": {
+            "$ref": "#/components/schemas/FilterOperator"
+          },
+          "value": {
+            "type": "object"
+          }
+        }
+      },
+      "DatasetMode": {
+        "type": "string",
+        "enum": [
+          "pull_through",
+          "cached",
+          "mirror",
+          "synthetic"
+        ]
+      },
+      "Datasource": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "ds_type",
+          "config",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "config": {
+            "type": "object"
+          },
+          "connection_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Optional reference to a shared OAuth connection. When set, OAuth client credentials\n(client_id/client_secret) come from the connection and the datasource.config only\nholds non-credential fields (e.g. calendar_id)."
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "ds_type": {
+            "$ref": "#/components/schemas/DatasourceType"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "read_only": {
+            "type": "boolean",
+            "description": "When true, all write actions on this datasource are blocked."
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "DatasourceListResponse": {
+        "type": "object",
+        "required": [
+          "datasources"
+        ],
+        "properties": {
+          "datasources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Datasource"
+            }
+          }
+        }
+      },
+      "DatasourceType": {
+        "type": "string",
+        "enum": [
+          "gmail",
+          "google_calendar",
+          "google_drive",
+          "postgres",
+          "jira",
+          "linear",
+          "rest",
+          "github",
+          "hubspot",
+          "imap",
+          "file_upload"
+        ]
+      },
+      "DeletedResponse": {
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DraftDescriptionRequest": {
+        "type": "object",
+        "required": [
+          "datasource_id"
+        ],
+        "properties": {
+          "dataset_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "datasource_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "source_config": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "DuplicateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EnvelopeMeta": {
+        "type": "object",
+        "required": [
+          "total",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "response_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "sorted_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Echo of the field the result set was actually ordered by (a\n`display_name`). Present only when a sort was honored; its *absence* when\nthe agent asked to sort signals a silent no-op (ordering undefined)."
+          },
+          "sorted_dir": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`asc` or `desc`, set alongside `sorted_by`."
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "EnvelopeResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {}
+          },
+          "meta": {
+            "$ref": "#/components/schemas/EnvelopeMeta"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "ExportRequest": {
+        "type": "object",
+        "required": [
+          "output_dir"
+        ],
+        "properties": {
+          "daemon_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Override the daemon URL written into config.json / SKILL.md. Defaults to\nthe daemon's own bind URL (e.g. http://127.0.0.1:9820)."
+          },
+          "include_mcp": {
+            "type": "boolean"
+          },
+          "output_dir": {
+            "type": "string"
+          },
+          "zip": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FieldsResponse": {
+        "type": "object",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetField"
+            }
+          }
+        }
+      },
+      "FilterLogic": {
+        "type": "string",
+        "enum": [
+          "and",
+          "or"
+        ]
+      },
+      "FilterOperator": {
+        "type": "string",
+        "enum": [
+          "equals",
+          "not_equals",
+          "contains",
+          "not_contains",
+          "greater_than",
+          "less_than",
+          "in",
+          "not_in"
+        ]
+      },
+      "FiltersResponse": {
+        "type": "object",
+        "required": [
+          "filters"
+        ],
+        "properties": {
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetFilter"
+            }
+          }
+        }
+      },
+      "ForceSimulateRequest": {
+        "type": "object",
+        "required": [
+          "force_simulate"
+        ],
+        "properties": {
+          "force_simulate": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GenerateRequest": {
+        "type": "object",
+        "properties": {
+          "row_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "IdResponse": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "InstallationsResponse": {
+        "type": "object",
+        "required": [
+          "installations"
+        ],
+        "properties": {
+          "installations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentSkillInstallation"
+            }
+          }
+        }
+      },
+      "InvokeMetadata": {
+        "type": "object",
+        "required": [
+          "action_id",
+          "action_type",
+          "replayed",
+          "simulated"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "action_type": {
+            "type": "string"
+          },
+          "replayed": {
+            "type": "boolean"
+          },
+          "simulated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "InvokeResponse": {
+        "type": "object",
+        "required": [
+          "result",
+          "metadata"
+        ],
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/InvokeMetadata"
+          },
+          "result": {
+            "type": "object"
+          }
+        }
+      },
+      "OAuthConnection": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "client_id",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "OAuth scopes requested during the authorisation flow. Empty means \"use\nthe hardcoded per-datasource-type default\" — we read this at auth-url\nbuild time in the daemon, not at token-refresh time."
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "OAuthStartRequest": {
+        "type": "object",
+        "required": [
+          "datasource_id"
+        ],
+        "properties": {
+          "datasource_id": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "OAuthStartResponse": {
+        "type": "object",
+        "required": [
+          "auth_url",
+          "message"
+        ],
+        "properties": {
+          "auth_url": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "PendingApprovalResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "approval_id",
+          "poll_url",
+          "metadata"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/InvokeMetadata"
+          },
+          "poll_url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "PolicyKind": {
+        "type": "string",
+        "enum": [
+          "auto",
+          "always_approve",
+          "threshold"
+        ]
+      },
+      "RequireReviewRequest": {
+        "type": "object",
+        "required": [
+          "require"
+        ],
+        "properties": {
+          "require": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ResolveApprovalRequest": {
+        "type": "object",
+        "required": [
+          "resolved_by"
+        ],
+        "properties": {
+          "resolved_by": {
+            "type": "string"
+          }
+        }
+      },
+      "RestSampleRequest": {
+        "type": "object",
+        "required": [
+          "dataset_config"
+        ],
+        "properties": {
+          "dataset_config": {
+            "type": "object"
+          },
+          "sample_limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "RiskLevel": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ]
+      },
+      "SetActionStateRequest": {
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/ActionState"
+          }
+        }
+      },
+      "SkillResponse": {
+        "type": "object",
+        "required": [
+          "skill"
+        ],
+        "properties": {
+          "skill": {
+            "type": "string"
+          }
+        }
+      },
+      "StatsResponse": {
+        "type": "object",
+        "required": [
+          "uptime_seconds",
+          "datasources",
+          "datasets",
+          "agents"
+        ],
+        "properties": {
+          "agents": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "datasets": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "datasources": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "uptime_seconds": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "TestActionRequest": {
+        "type": "object",
+        "required": [
+          "params"
+        ],
+        "properties": {
+          "params": {
+            "type": "object"
+          }
+        }
+      },
+      "TokenCreatedResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "token",
+          "message"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "message": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "TokenListResponse": {
+        "type": "object",
+        "required": [
+          "tokens"
+        ],
+        "properties": {
+          "tokens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentToken"
+            }
+          }
+        }
+      },
+      "UpdateActionRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "params_schema",
+          "result_schema",
+          "threshold_config"
+        ],
+        "properties": {
+          "approval_ttl_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "params_schema": {
+            "type": "object"
+          },
+          "policy_kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PolicyKind"
+              }
+            ]
+          },
+          "result_schema": {
+            "type": "object"
+          },
+          "threshold_config": {
+            "type": "object"
+          }
+        }
+      },
+      "UpdateAiRequest": {
+        "type": "object",
+        "properties": {
+          "api_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "UpdateBindingRequest": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rate_limit_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "rate_limit_period_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "UpdateConnectionRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "client_id"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "UpdateDatasetRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "mode"
+        ],
+        "properties": {
+          "cache_ttl_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "data_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_rows_per_query": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateDatasourceRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "type": "object"
+          },
+          "connection_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateScopesRequest": {
+        "type": "object",
+        "required": [
+          "scopes"
+        ],
+        "properties": {
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "UpdatedResponse": {
+        "type": "object",
+        "required": [
+          "updated"
+        ],
+        "properties": {
+          "updated": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "agent_token": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Per-agent bearer token"
+      },
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Health check and statistics"
+    },
+    {
+      "name": "Datasources",
+      "description": "Manage datasource connections (Gmail, Postgres, REST, etc.)"
+    },
+    {
+      "name": "Datasets",
+      "description": "Manage datasets: CRUD, fields, filters, preview, PII scanning"
+    },
+    {
+      "name": "Agents",
+      "description": "Manage agents: CRUD, dataset bindings, tokens, action bindings, skill installations"
+    },
+    {
+      "name": "Actions",
+      "description": "Manage action definitions (per-datasource write operations)"
+    },
+    {
+      "name": "Approvals",
+      "description": "Approval queue for gated actions"
+    },
+    {
+      "name": "Audit",
+      "description": "Query the audit log"
+    },
+    {
+      "name": "Settings",
+      "description": "Runtime daemon settings (AI assist)"
+    },
+    {
+      "name": "OAuth",
+      "description": "OAuth flows and connection management"
+    },
+    {
+      "name": "Live API",
+      "description": "Agent-facing read API: list, get, search, schema"
+    },
+    {
+      "name": "Actions API",
+      "description": "Agent-facing write API: invoke actions with idempotency and approval support"
+    }
+  ]
+}
