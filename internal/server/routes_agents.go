@@ -369,7 +369,7 @@ func (s *Server) bindAgentDatasetHandler(w http.ResponseWriter, r *http.Request)
 	for _, b := range bindings {
 		if b.DatasetID == *req.DatasetID {
 			writeErrorOnly(w, http.StatusConflict, fmt.Sprintf(
-				"dataset %d (%q) is already bound to this agent as %q", ds.ID, ds.Name, b.Alias))
+				"dataset %d (%q) is already bound on %s as %q", ds.ID, ds.Name, s.agentLabel(r, id), b.Alias))
 			return
 		}
 	}
@@ -403,9 +403,22 @@ func (s *Server) datasetAliasConflict(r *http.Request, agentID, datasetID int64,
 		return "", err
 	}
 	if other == nil {
-		return fmt.Sprintf("alias %q is already bound to dataset %d", alias, b.DatasetID), nil
+		return fmt.Sprintf("alias %q is already bound on %s to dataset %d",
+			alias, s.agentLabel(r, agentID), b.DatasetID), nil
 	}
-	return fmt.Sprintf("alias %q is already bound to dataset %d (%q)", alias, other.ID, other.Name), nil
+	return fmt.Sprintf("alias %q is already bound on %s to dataset %d (%q)",
+		alias, s.agentLabel(r, agentID), other.ID, other.Name), nil
+}
+
+// agentLabel names an agent in error messages, e.g. `agent 113 ("Mail Bot")`.
+// Aliases are scoped to the agent, which may be shared by several people, so
+// conflicts say whose namespace the alias lives in.
+func (s *Server) agentLabel(r *http.Request, agentID int64) string {
+	a, err := crud.GetAgent(r.Context(), s.db, agentID)
+	if err != nil || a == nil {
+		return fmt.Sprintf("agent %d", agentID)
+	}
+	return fmt.Sprintf("agent %d (%q)", a.ID, a.Name)
 }
 
 // writeBindingWriteError maps a binding insert/update failure: a UNIQUE
@@ -748,7 +761,8 @@ func (s *Server) bindAgentActionHandler(w http.ResponseWriter, r *http.Request) 
 	for _, b := range bindings {
 		if b.ActionID == *req.ActionID {
 			writeErrorOnly(w, http.StatusConflict, fmt.Sprintf(
-				"action %d (%q) is already bound to this agent as %q", b.ActionID, s.actionName(r, b.ActionID), b.Alias))
+				"action %d (%q) is already bound on %s as %q",
+				b.ActionID, s.actionName(r, b.ActionID), s.agentLabel(r, id), b.Alias))
 			return
 		}
 	}
@@ -770,7 +784,8 @@ func (s *Server) bindAgentActionHandler(w http.ResponseWriter, r *http.Request) 
 func (s *Server) actionAliasConflict(r *http.Request, bindings []models.AgentAction, actionID int64, alias string) string {
 	for _, b := range bindings {
 		if b.Alias == alias && b.ActionID != actionID {
-			return fmt.Sprintf("alias %q is already bound to action %d (%q)", alias, b.ActionID, s.actionName(r, b.ActionID))
+			return fmt.Sprintf("alias %q is already bound on %s to action %d (%q)",
+				alias, s.agentLabel(r, b.AgentID), b.ActionID, s.actionName(r, b.ActionID))
 		}
 	}
 	return ""

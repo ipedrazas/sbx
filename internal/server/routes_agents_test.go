@@ -148,7 +148,7 @@ func TestAgentsDatasetBindings(t *testing.T) {
 	// Same dataset bound twice → 409 naming the existing alias.
 	rec = e.manage("POST", f.path("/datasets"), map[string]any{"dataset_id": f.datasetID, "alias": "other"})
 	agentsExpect(t, rec, 409)
-	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`dataset %d ("Inbox") is already bound to this agent as "inbox"`, f.datasetID) {
+	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`dataset %d ("Inbox") is already bound on agent %d ("Mail Bot") as "inbox"`, f.datasetID, f.agentID) {
 		t.Fatalf("got %q", msg)
 	}
 	// Alias taken by another dataset → 409 naming the dataset holding it.
@@ -158,14 +158,14 @@ func TestAgentsDatasetBindings(t *testing.T) {
 	}
 	rec = e.manage("POST", f.path("/datasets"), map[string]any{"dataset_id": second, "alias": "inbox"})
 	agentsExpect(t, rec, 409)
-	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`alias "inbox" is already bound to dataset %d ("Inbox")`, f.datasetID) {
+	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`alias "inbox" is already bound on agent %d ("Mail Bot") to dataset %d ("Inbox")`, f.agentID, f.datasetID) {
 		t.Fatalf("got %q", msg)
 	}
 	// Renaming onto a taken alias → 409, not 500; keeping its own alias is fine.
 	agentsExpect(t, e.manage("POST", f.path("/datasets"), map[string]any{"dataset_id": second, "alias": "sent"}), 201)
 	rec = e.manage("PUT", f.path("/datasets/%d", second), map[string]any{"alias": "inbox"})
 	agentsExpect(t, rec, 409)
-	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`alias "inbox" is already bound to dataset %d ("Inbox")`, f.datasetID) {
+	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`alias "inbox" is already bound on agent %d ("Mail Bot") to dataset %d ("Inbox")`, f.agentID, f.datasetID) {
 		t.Fatalf("got %q", msg)
 	}
 	agentsExpect(t, e.manage("PUT", f.path("/datasets/%d", second), map[string]any{"alias": "sent"}), 200)
@@ -344,7 +344,7 @@ func TestAgentsActionBindings(t *testing.T) {
 	// Same action bound twice → 409 naming the existing alias.
 	rec = e.manage("POST", f.path("/actions"), map[string]any{"action_id": f.actionID, "alias": "other"})
 	agentsExpect(t, rec, 409)
-	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`action %d ("Send") is already bound to this agent as "send"`, f.actionID) {
+	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`action %d ("Send") is already bound on agent %d ("Mail Bot") as "send"`, f.actionID, f.agentID) {
 		t.Fatalf("got %q", msg)
 	}
 	// Alias taken by another action → 409 naming the action holding it.
@@ -355,14 +355,14 @@ func TestAgentsActionBindings(t *testing.T) {
 	}
 	rec = e.manage("POST", f.path("/actions"), map[string]any{"action_id": second, "alias": "send"})
 	agentsExpect(t, rec, 409)
-	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`alias "send" is already bound to action %d ("Send")`, f.actionID) {
+	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`alias "send" is already bound on agent %d ("Mail Bot") to action %d ("Send")`, f.agentID, f.actionID) {
 		t.Fatalf("got %q", msg)
 	}
 	// Renaming onto a taken alias → 409, not 500; keeping its own alias is fine.
 	agentsExpect(t, e.manage("POST", f.path("/actions"), map[string]any{"action_id": second, "alias": "reply"}), 201)
 	rec = e.manage("PUT", f.path("/actions/%d", second), map[string]any{"alias": "send"})
 	agentsExpect(t, rec, 409)
-	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`alias "send" is already bound to action %d ("Send")`, f.actionID) {
+	if msg := decode(t, rec)["error"]; msg != fmt.Sprintf(`alias "send" is already bound on agent %d ("Mail Bot") to action %d ("Send")`, f.agentID, f.actionID) {
 		t.Fatalf("got %q", msg)
 	}
 	agentsExpect(t, e.manage("PUT", f.path("/actions/%d", second), map[string]any{"alias": "reply"}), 200)
