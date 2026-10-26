@@ -361,14 +361,62 @@ func (s *Server) bindAgentDatasetHandler(w http.ResponseWriter, r *http.Request)
 		writeErrorOnly(w, http.StatusBadRequest, "dataset not found")
 		return
 	}
+	bindings, err := crud.ListAgentDatasets(ctx, s.db, id)
+	if err != nil {
+		writeErrorOnly(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, b := range bindings {
+		if b.DatasetID == *req.DatasetID {
+			writeErrorOnly(w, http.StatusConflict, fmt.Sprintf(
+				"dataset %d (%q) is already bound to this agent as %q", ds.ID, ds.Name, b.Alias))
+			return
+		}
+	}
+	if msg, err := s.datasetAliasConflict(r, id, *req.DatasetID, *req.Alias); err != nil {
+		writeErrorOnly(w, http.StatusInternalServerError, err.Error())
+		return
+	} else if msg != "" {
+		writeErrorOnly(w, http.StatusConflict, msg)
+		return
+	}
 	bindingID, err := crud.BindAgentDataset(ctx, s.db, id, *req.DatasetID, *req.Alias,
 		req.RateLimitCount, req.RateLimitPeriodSeconds)
 	if err != nil {
-		writeErrorOnly(w, http.StatusConflict, err.Error())
+		writeBindingWriteError(w, err)
 		return
 	}
 	s.resyncAgentDir(r, id, nil)
 	writeJSON(w, http.StatusCreated, map[string]any{"id": bindingID})
+}
+
+// datasetAliasConflict returns a user-facing message when alias is already
+// bound on agentID to a dataset other than datasetID, or "" when it is free.
+func (s *Server) datasetAliasConflict(r *http.Request, agentID, datasetID int64, alias string) (string, error) {
+	ctx := r.Context()
+	b, err := crud.GetAgentBinding(ctx, s.db, agentID, alias)
+	if err != nil || b == nil || b.DatasetID == datasetID {
+		return "", err
+	}
+	other, err := crud.GetDataset(ctx, s.db, b.DatasetID)
+	if err != nil {
+		return "", err
+	}
+	if other == nil {
+		return fmt.Sprintf("alias %q is already bound to dataset %d", alias, b.DatasetID), nil
+	}
+	return fmt.Sprintf("alias %q is already bound to dataset %d (%q)", alias, other.ID, other.Name), nil
+}
+
+// writeBindingWriteError maps a binding insert/update failure: a UNIQUE
+// violation that slipped past the pre-checks (a concurrent write) is a 409,
+// anything else a 500.
+func writeBindingWriteError(w http.ResponseWriter, err error) {
+	if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+		writeErrorOnly(w, http.StatusConflict, "binding conflicts with an existing binding for this agent")
+		return
+	}
+	writeErrorOnly(w, http.StatusInternalServerError, err.Error())
 }
 
 type agentUpdateDatasetBindingRequest struct {
@@ -400,8 +448,15 @@ func (s *Server) updateAgentDatasetBindingHandler(w http.ResponseWriter, r *http
 	}
 	ctx := r.Context()
 	if req.Alias != nil {
-		if _, err := crud.UpdateAgentDatasetAlias(ctx, s.db, id, datasetID, *req.Alias); err != nil {
+		if msg, err := s.datasetAliasConflict(r, id, datasetID, *req.Alias); err != nil {
 			writeErrorOnly(w, http.StatusInternalServerError, err.Error())
+			return
+		} else if msg != "" {
+			writeErrorOnly(w, http.StatusConflict, msg)
+			return
+		}
+		if _, err := crud.UpdateAgentDatasetAlias(ctx, s.db, id, datasetID, *req.Alias); err != nil {
+			writeBindingWriteError(w, err)
 			return
 		}
 	}
@@ -685,13 +740,49 @@ func (s *Server) bindAgentActionHandler(w http.ResponseWriter, r *http.Request) 
 		writeErrorOnly(w, http.StatusBadRequest, "action not found")
 		return
 	}
+	bindings, err := actions.ListAgentActions(ctx, s.db, id)
+	if err != nil {
+		writeErrorOnly(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, b := range bindings {
+		if b.ActionID == *req.ActionID {
+			writeErrorOnly(w, http.StatusConflict, fmt.Sprintf(
+				"action %d (%q) is already bound to this agent as %q", b.ActionID, s.actionName(r, b.ActionID), b.Alias))
+			return
+		}
+	}
+	if msg := s.actionAliasConflict(r, bindings, *req.ActionID, *req.Alias); msg != "" {
+		writeErrorOnly(w, http.StatusConflict, msg)
+		return
+	}
 	bindingID, err := actions.BindAgentAction(ctx, s.db, id, *req.ActionID, *req.Alias, agentTrimmedNonEmpty(req.Template))
 	if err != nil {
-		writeErrorOnly(w, http.StatusConflict, err.Error())
+		writeBindingWriteError(w, err)
 		return
 	}
 	s.resyncAgentDir(r, id, nil)
 	writeJSON(w, http.StatusCreated, map[string]any{"id": bindingID})
+}
+
+// actionAliasConflict returns a user-facing message when alias is already used
+// in bindings by an action other than actionID, or "" when it is free.
+func (s *Server) actionAliasConflict(r *http.Request, bindings []models.AgentAction, actionID int64, alias string) string {
+	for _, b := range bindings {
+		if b.Alias == alias && b.ActionID != actionID {
+			return fmt.Sprintf("alias %q is already bound to action %d (%q)", alias, b.ActionID, s.actionName(r, b.ActionID))
+		}
+	}
+	return ""
+}
+
+// actionName is the action's name for error messages; "" if it can't be read.
+func (s *Server) actionName(r *http.Request, actionID int64) string {
+	a, err := actions.GetAction(r.Context(), s.db, actionID)
+	if err != nil || a == nil {
+		return ""
+	}
+	return a.Name
 }
 
 type agentUpdateActionBindingRequest struct {
@@ -763,8 +854,12 @@ func (s *Server) updateAgentActionBindingHandler(w http.ResponseWriter, r *http.
 	}
 
 	if req.Alias != nil {
+		if msg := s.actionAliasConflict(r, bindings, actionID, *req.Alias); msg != "" {
+			writeErrorOnly(w, http.StatusConflict, msg)
+			return
+		}
 		if _, err := actions.UpdateAgentActionAlias(ctx, s.db, binding.ID, *req.Alias); err != nil {
-			writeErrorOnly(w, http.StatusInternalServerError, err.Error())
+			writeBindingWriteError(w, err)
 			return
 		}
 	}
