@@ -607,6 +607,28 @@ func TestHTTPErrorsAndGraphQLErrors(t *testing.T) {
 		t.Fatalf("got %q", err)
 	}
 
+	// HTTP 400 with an `errors` array is a user error, not an upstream failure.
+	startFake(t, func(gqlReq) (int, any) {
+		return 400, map[string]any{"errors": []any{
+			map[string]any{"message": "Query too complex", "extensions": map[string]any{
+				"userPresentableMessage": "The query is too complex. Complexity: 16025. Maximum allowed complexity: 10000.",
+			}},
+		}}
+	})
+	err = c.TestConnection(ctx)
+	assertKind(t, err, connector.ErrBadInput)
+	if err.Error() != "invalid request: Linear GraphQL error: Query too complex (The query is too complex. Complexity: 16025. Maximum allowed complexity: 10000.)" {
+		t.Fatalf("got %q", err)
+	}
+
+	// HTTP 400 without a GraphQL body stays an upstream error.
+	startFake(t, func(gqlReq) (int, any) { return 400, "bad" })
+	err = c.TestConnection(ctx)
+	assertKind(t, err, connector.ErrUpstreamHTTP)
+	if err.(*connector.Error).Status != 400 {
+		t.Fatal("status")
+	}
+
 	old := apiURL
 	apiURL = "http://127.0.0.1:1"
 	defer func() { apiURL = old }()

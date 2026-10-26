@@ -26,6 +26,10 @@ var tokenURL = oauth.LinearTokenURL
 
 // The issue fields requested in every GraphQL selection. `team` and `project`
 // carry their UUIDs so agents can feed them straight into create actions.
+//
+// Nested connections must set `first`: Linear multiplies their cost by the
+// page size, and the default of 50 pushes a 250-row page past the 10,000
+// complexity limit (~16,000). 20 keeps a full page around 8,000.
 const issueFields = `
     id
     identifier
@@ -40,7 +44,7 @@ const issueFields = `
     creator { name }
     team { id key }
     project { id name }
-    labels { nodes { name } }
+    labels(first: 20) { nodes { name } }
 `
 
 const projectFields = `
@@ -53,7 +57,7 @@ const projectFields = `
     createdAt
     updatedAt
     lead { name }
-    teams { nodes { id key } }
+    teams(first: 20) { nodes { id key } }
 `
 
 const teamFields = `
@@ -99,6 +103,20 @@ func formatGraphQLError(e any) string {
 		return fmt.Sprintf("%s (%s)", msg, detail)
 	}
 	return msg
+}
+
+// graphqlErrors returns a BadInput error built from a response's top-level
+// `errors` array, or nil when there are none.
+func graphqlErrors(top map[string]any) error {
+	errs, ok := top["errors"].([]any)
+	if !ok || len(errs) == 0 {
+		return nil
+	}
+	parts := make([]string, len(errs))
+	for i, e := range errs {
+		parts[i] = formatGraphQLError(e)
+	}
+	return connector.BadInput("Linear GraphQL error: %s", strings.Join(parts, "; "))
 }
 
 // Entity is the Linear object a dataset is bound to
@@ -204,6 +222,16 @@ func (c *Connector) graphql(ctx context.Context, query string, variables map[str
 		return nil, connector.Query("%s", err.Error())
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		// Linear rejects some invalid queries (e.g. "Query too complex") with
+		// HTTP 400 and the usual `errors` array; report those like the 200 case.
+		if resp.StatusCode == http.StatusBadRequest {
+			if v, err := util.DecodeJSON(raw); err == nil {
+				top, _ := v.(map[string]any)
+				if err := graphqlErrors(top); err != nil {
+					return nil, err
+				}
+			}
+		}
 		return nil, connector.FromUpstreamHTTP(resp.StatusCode, string(raw), "Linear API")
 	}
 	v, err := util.DecodeJSON(raw)
@@ -211,12 +239,8 @@ func (c *Connector) graphql(ctx context.Context, query string, variables map[str
 		return nil, connector.Query("invalid JSON from Linear: %s", err.Error())
 	}
 	top, _ := v.(map[string]any)
-	if errs, ok := top["errors"].([]any); ok && len(errs) > 0 {
-		parts := make([]string, len(errs))
-		for i, e := range errs {
-			parts[i] = formatGraphQLError(e)
-		}
-		return nil, connector.BadInput("Linear GraphQL error: %s", strings.Join(parts, "; "))
+	if err := graphqlErrors(top); err != nil {
+		return nil, err
 	}
 	data, _ := top["data"].(map[string]any)
 	if data == nil {
